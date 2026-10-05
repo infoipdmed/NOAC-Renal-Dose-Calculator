@@ -80,7 +80,7 @@ button.cp{background:linear-gradient(135deg,var(--pri),var(--acc));color:#fff;pa
 <div class="grid g3" id="fs">
 <button class="opt" data-f="ckd"><strong>CKD-EPI 2021</strong><small>eGFR (mL/min/1.73 m²) ใช้ประเมินและจัดระยะ CKD ไม่ใช้เป็นฐานหลักในการปรับขนาดยา NOAC</small></button>
 <button class="opt" data-f="mdrd"><strong>MDRD (IDMS)</strong><small>eGFR (mL/min/1.73 m²) เก่ากว่า ประเมินต่ำกว่าจริงเมื่อ GFR สูง เหมาะกับ CKD ที่ GFR &lt; 60</small></button>
-<button class="opt on" data-f="cg"><strong>Cockcroft-Gault</strong><small>CrCl (mL/min) สูตรอ้างอิงในเอกสารกำกับยา NOAC และตารางขนาดยานี้ ต้องใช้น้ำหนักและส่วนสูง</small></button>
+<button class="opt on" data-f="cg"><strong>Cockcroft-Gault</strong><small>CrCl (mL/min) สูตรอ้างอิงในเอกสารกำกับยา NOAC และตารางขนาดยานี้ ต้องใช้น้ำหนัก (ส่วนสูงช่วยปรับน้ำหนักในผู้ป่วยอ้วน)</small></button>
 </div>
 <div class="hint" id="fhint"></div></div>
 
@@ -90,7 +90,7 @@ button.cp{background:linear-gradient(135deg,var(--pri),var(--acc));color:#fff;pa
 <div><label>เพศ</label><select id="sex"><option value="m">ชาย</option><option value="f">หญิง</option></select></div>
 <div><label>SCr (mg/dL)</label><input type="number" id="scr" step="0.01" min="0.1" max="15" inputmode="decimal"></div>
 <div class="cgOnly"><label>น้ำหนักจริง (kg)</label><input type="number" id="wt" step="0.1" min="20" max="300" inputmode="decimal"></div>
-<div class="cgOnly"><label>ส่วนสูง (cm)</label><input type="number" id="ht" step="0.5" min="100" max="230" inputmode="decimal"></div>
+<div class="cgOnly"><label>ส่วนสูง (cm) <span style="color:var(--acc);font-weight:600">· ไม่บังคับ</span></label><input type="number" id="ht" step="0.5" min="100" max="230" inputmode="decimal"><div class="hint" style="margin-top:5px">ช่วยให้คำนวณแม่นขึ้นในผู้ป่วยอ้วน เว้นว่างได้ ระบบจะใช้น้ำหนักจริง</div></div>
 </div>
 <label class="chk" style="margin-top:10px"><input type="checkbox" id="frail"><span>ผู้ป่วยอ่อนแอ (Frail)</span></label>
 <label class="chk"><input type="checkbox" id="rrt"><span>ได้รับการบำบัดทดแทนไต (RRT)</span></label>
@@ -118,7 +118,7 @@ button.cp{background:linear-gradient(135deg,var(--pri),var(--acc));color:#fff;pa
 <script>
 const $=id=>document.getElementById(id);
 const FN={ckd:'CKD-EPI 2021',mdrd:'MDRD (IDMS-traceable)',cg:'Cockcroft-Gault'};
-const FH={ckd:'สูตรไม่ใช้เชื้อชาติ (2021) กรอก: อายุ เพศ SCr',mdrd:'กรอก: อายุ เพศ SCr',cg:'กรอก: อายุ เพศ SCr น้ำหนัก ส่วนสูง ระบบจะเลือกน้ำหนัก (จริง / IBW / Adjusted) ให้อัตโนมัติ'};
+const FH={ckd:'สูตรไม่ใช้เชื้อชาติ (2021) กรอก: อายุ เพศ SCr',mdrd:'กรอก: อายุ เพศ SCr',cg:'กรอก: อายุ เพศ SCr น้ำหนัก (ส่วนสูงไม่บังคับ ถ้ากรอก ระบบจะเลือกน้ำหนักที่เหมาะสมให้อัตโนมัติ ถ้าไม่กรอก ใช้น้ำหนักจริง)'};
 const DN={dabi:'Dabigatran',riva:'Rivaroxaban',apix:'Apixaban',edox:'Edoxaban'};
 const IN={af:'Stroke prevention in AF',dvt:'Treatment DVT/PE',ext:'Extended treatment DVT/PE',ortho:'VTE prevention post-major orthopedic surgery'};
 const DUR='ระยะเวลา: Total knee arthroplasty < 14 วัน, Total hip arthroplasty < 35 วัน';
@@ -131,10 +131,12 @@ function calc(){
  if(!(age>=18&&age<=120&&scr>=0.1&&scr<=15))return null;
  if(F==='ckd'){const k=f?0.7:0.9,a=f?-0.241:-0.302;o.val=142*Math.pow(Math.min(scr/k,1),a)*Math.pow(Math.max(scr/k,1),-1.2)*Math.pow(0.9938,age)*(f?1.012:1);o.unit='mL/min/1.73 m²';}
  else if(F==='mdrd'){o.val=175*Math.pow(scr,-1.154)*Math.pow(age,-0.203)*(f?0.742:1);o.unit='mL/min/1.73 m²';}
- else{const wt=v('wt'),ht=v('ht');if(!(wt>=20&&wt<=300&&ht>=100&&ht<=230))return null;
-  const ibw=(f?45.5:50)+2.3*(ht/2.54-60),bmi=wt/Math.pow(ht/100,2);let w=wt,wl='น้ำหนักจริง';
-  if(wt>1.2*ibw||bmi>=30){w=ibw+0.4*(wt-ibw);wl='Adjusted BW';}
-  o.val=(140-age)*w/(72*scr)*(f?0.85:1);o.unit='mL/min';o.w=w;o.wl=wl;o.ibw=ibw;o.bmi=bmi;}
+ else{const wt=v('wt'),hs=$('ht').value.trim(),ht=v('ht');if(!(wt>=20&&wt<=300))return null;
+  if(hs!==''&&!(ht>=100&&ht<=230))return{bad:'ส่วนสูงควรอยู่ระหว่าง 100–230 cm หรือเว้นว่างไว้เพื่อใช้น้ำหนักจริง'};
+  let w=wt,wl='น้ำหนักจริง';o.hasH=hs!=='';
+  if(o.hasH){const ibw=(f?45.5:50)+2.3*(ht/2.54-60),bmi=wt/Math.pow(ht/100,2);o.ibw=ibw;o.bmi=bmi;
+   if(wt>1.2*ibw||bmi>=30){w=ibw+0.4*(wt-ibw);wl='Adjusted BW';}}
+  o.val=(140-age)*w/(72*scr)*(f?0.85:1);o.unit='mL/min';o.w=w;o.wl=wl;}
  return o;}
 
 function band(c){if(ck('rrt')||c<15)return 'd';if(c<30)return 'c';if(c<50)return 'b';return 'a';}
@@ -183,11 +185,11 @@ function render(){
  document.querySelectorAll('#fs .opt').forEach(e=>e.classList.toggle('on',e.dataset.f===F));
  $('fhint').textContent=FH[F];
  const R=$('res'),o=calc();
- $('bar').classList.add('hide');if(!o){R.innerHTML='<div class="card hint">กรอกข้อมูลให้ครบเพื่อแสดงผล</div>';copyText='';return;}
+ $('bar').classList.add('hide');if(!o||o.bad){R.innerHTML='<div class="card hint">'+(o&&o.bad?o.bad:'กรอกข้อมูลให้ครบเพื่อแสดงผล')+'</div>';copyText='';return;}
  const c=o.val,age=v('age'),L=[];const bb=$('bar');bb.classList.remove('hide');bb.innerHTML='<span>'+(F==='cg'?'CrCl ':'eGFR ')+c.toFixed(1)+' mL/min'+(F==='cg'?'':'/1.73 m²')+'</span><span>ดูผล ↓</span>';bb.onclick=()=>$('res').scrollIntoView({behavior:'smooth'});
  let h='<div class="card"><h2>ผลการคำนวณ</h2><div class="big">'+c.toFixed(1)+' <span style="font-size:16px;font-weight:400;color:var(--mut)">'+o.unit+'</span></div><div class="hint" style="margin:2px 0 6px">'+FN[F]+'</div>';
  L.push('ผลการประเมินการทำงานของไต / NOAC','สูตร: '+FN[F],'อายุ '+age+' ปี, เพศ '+($('sex').value==='f'?'หญิง':'ชาย')+', SCr '+v('scr')+' mg/dL');
- if(F==='cg'){h+='<div class="row"><span>น้ำหนักที่ใช้คำนวณ</span><b>'+o.w.toFixed(1)+' kg ('+o.wl+')</b></div><div class="row"><span>น้ำหนักจริง / IBW / BMI</span><b>'+v('wt')+' / '+o.ibw.toFixed(1)+' kg / '+o.bmi.toFixed(1)+'</b></div>';L.push('น้ำหนักจริง '+v('wt')+' kg, ส่วนสูง '+v('ht')+' cm, ใช้ '+o.wl+' '+o.w.toFixed(1)+' kg','CrCl (Cockcroft-Gault) = '+c.toFixed(1)+' mL/min');}
+ if(F==='cg'){h+='<div class="row"><span>น้ำหนักที่ใช้คำนวณ</span><b>'+o.w.toFixed(1)+' kg ('+o.wl+')</b></div>'+(o.hasH?'<div class="row"><span>น้ำหนักจริง / IBW / BMI</span><b>'+v('wt')+' / '+o.ibw.toFixed(1)+' kg / '+o.bmi.toFixed(1)+'</b></div>':'<div class="banner warn"><b>ไม่ได้ระบุส่วนสูง</b> ระบบจึงใช้น้ำหนักจริงคำนวณ โดยไม่ได้ปรับน้ำหนักตามส่วนสูง ในผู้ป่วยอ้วนหรือผอมมาก CrCl อาจสูงหรือต่ำกว่าความเป็นจริง ควรระบุส่วนสูงเมื่อมีข้อมูล</div>');L.push('น้ำหนักจริง '+v('wt')+' kg, '+(o.hasH?'ส่วนสูง '+v('ht')+' cm, ใช้ '+o.wl+' '+o.w.toFixed(1)+' kg':'ไม่ได้ระบุส่วนสูง ใช้น้ำหนักจริง ไม่ได้ปรับน้ำหนักตามส่วนสูง'),'CrCl (Cockcroft-Gault) = '+c.toFixed(1)+' mL/min');}
  else L.push('eGFR = '+c.toFixed(1)+' '+o.unit);
  if(F==='cg'&&age>=65&&v('scr')<0.8)h+='<div class="banner warn">SCr ต่ำ (&lt; 0.8) ในผู้สูงอายุ อาจทำให้ CrCl สูงเกินจริง พิจารณาความเหมาะสมร่วมกับสภาพกล้ามเนื้อของผู้ป่วย</div>';
  h+='</div>';
